@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package response;
+
+import "types.proto";
+
+
+message Login {
+    uint64 session_id = 1;
+}
+
+message Register {
+    bool success = 1;
+}
+
+message UserInfo {
+    string name = 1;
+    uint64 score = 2;
+}
+
+message Scoreboard {
+    uint64 user_score = 1;
+    uint64 user_rate = 2;
+    repeated types.UserScore top_10 = 3;
+}
+
+message QueueCreate {
+    uint64 queue_id = 1;
+}
+
+message QueueJoin {
+    bool success = 1;
+}
+
+message QueueList {
+    repeated types.QueueItem  queue_items = 1;
+}
+
+message QueueStatus {
+    repeated string player_names = 1;
+    uint32 size = 2;
+    bool initialized = 3;
+}
+
+message PendingGameCycle {
+    uint32 cycle_number = 1;
+}
+
+message GameState {
+    repeated types.Player players = 1;
+    repeated types.FoodBlock foods = 2;
+    repeated types.WallBlock walls = 3;
+}
+
+message ActionSubmit {
+    bool success = 1;
+}
+

@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+package types;
+
+
+enum Action {
+    UP = 0;
+    RIGHT = 1;
+    DOWN = 2;
+    LEFT = 3;
+}
+
+message UserScore {
+    string name = 1;
+    uint64 score = 2;
+}
+
+message QueueItem {
+    uint64 id = 1;
+    uint32 occupied = 2;
+    uint32 size = 3;
+}
+
+message Block {
+    uint32 x = 1;
+    uint32 y = 2;
+}
+
+message PlayerBlock {
+    Block position = 1;
+}
+
+message Player {
+    string name = 1;
+    bool is_alive = 2;
+    PlayerBlock head = 3;
+    repeated PlayerBlock blocks = 4;
+}
+
+message FoodBlock {
+    Block position = 1;
+    uint32 benefit = 2;
+}
+
+message WallBlock {
+    Block position = 1;
+}
+
+message PortalBlock {
+    Block position = 1;
+}
+
+message Portal {
+    PortalBlock peer_1 = 1;
+    PortalBlock peer_2 = 2;
+}
+

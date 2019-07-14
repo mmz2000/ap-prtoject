@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+import "request.proto";
+import "response.proto";
+
+
+message Request {
+    oneof request {
+        request.Login              login                 = 1;
+        request.Register           register              = 2;
+        request.UserInfo           user_info             = 3;
+        request.Scoreboard         scoreboard            = 4;
+
+        request.QueueCreate        queue_create          = 5;
+        request.QueueJoin          queue_join            = 6;
+        request.QueueList          queue_list            = 7;
+        request.QueueStatus        queue_status          = 8;
+
+        request.PendingGameCycle   pending_game_cycle    = 9;
+        request.GameState          game_state            = 10;
+        request.ActionSubmit       action_submit         = 11;
+    }
+}
+
+message Response {
+    oneof response {
+        response.Login             login                 = 1;
+        response.Register          register              = 2;
+        response.UserInfo          user_info             = 3;
+        response.Scoreboard        scoreboard            = 4;
+
+        response.QueueCreate       queue_create          = 5;
+        response.QueueJoin         queue_join            = 6;
+        response.QueueList         queue_list            = 7;
+        response.QueueStatus       queue_status          = 8;
+
+        response.PendingGameCycle  pending_game_cycle    = 9;
+        response.GameState         game_state            = 10;
+        response.ActionSubmit      action_submit         = 11;
+    }
+}
+

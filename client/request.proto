@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+import "types.proto";
+
+package request;
+
+
+message Login {
+    string username = 1;
+    string password = 2;
+}
+
+message Register {
+    string name = 1;
+    string username = 2;
+    string password = 3;
+    string confirm_password = 4;
+    
+}
+
+message UserInfo {
+    uint64 session_id = 1;
+}
+
+message Scoreboard {
+    uint64 session_id = 1;
+}
+
+message QueueCreate {
+    uint64 session_id = 1;
+    uint32 queue_size = 2;
+}
+
+message QueueJoin {
+    uint64 session_id = 1;
+    uint32 queue_id = 2;
+}
+
+message QueueList {
+    uint64 session_id = 1;
+}
+
+message QueueStatus {  // if in a queue
+    uint64 session_id = 1;
+}
+
+message PendingGameCycle {
+    uint64 session_id = 1;
+}
+
+message GameState {
+    uint64 session_id = 1;
+}
+
+message ActionSubmit {
+    uint64 session_id = 1;
+    types.Action action = 2;
+}
+
