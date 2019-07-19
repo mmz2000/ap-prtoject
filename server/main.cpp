@@ -17,8 +17,12 @@
 
 const unsigned short PORT = 5000;
 std::map<std::string,database::User> users;
+std::map<int,sf::TcpSocket *> sockets;
+std::map<int,sf::Thread *> threads;
+std::map<int,bool> EOT;
 
 sf::TcpListener listener;
+sf::Mutex globalMutex;
 
 int random_id ()
 {
@@ -49,9 +53,15 @@ response::Login * log(const request::Login Log)
     
     if(users.find(Log.username()) != users.end() && Log.password() == users[Log.username()].password())
     {
-        res->set_session_id(random_id());
+        globalMutex.lock();
+        int a=random_id();
+        res->set_session_id(a);
+        users[Log.username()].set_session_id(a);
+        globalMutex.unlock();
     } else {
+        globalMutex.lock();
         res->set_session_id(0);
+        globalMutex.unlock();
     }
     return res;
 }
@@ -81,20 +91,20 @@ response::Register * reg(const request::Register Reg)
     return res;
 }
 
-void Server(void)
+void Server(int id)
 {
-    sf::TcpSocket socket;
-    listener.accept(socket);
     std::cout<<"connected\n";
     std::string reqStr;
     sf::Packet packetReceive;
     Response res;
     sf::Packet packetSend;
-    socket.receive(packetReceive);
+    sockets[id]->receive(packetReceive);
     if (packetReceive >> reqStr)
     {
         Request req;
+        globalMutex.lock();
         req.ParseFromString(reqStr);
+        globalMutex.unlock();
         if (req.has_login())
         {
             res.set_allocated_login(log(req.login()));
@@ -106,13 +116,40 @@ void Server(void)
     std::stringstream stream;
     res.SerializeToOstream(&stream);
     packetSend<<stream.str();
-    socket.send(packetSend);
+    sockets[id]->send(packetSend);
+    EOT[id]=true;
 }
 
 int main(){
     openfile();
-
+    int id=0;
     listener.listen(PORT);
-    Server();
+    bool quit=false;
+    
+    while(!quit)
+    {
+        sf::TcpSocket *socket_ptr(new sf::TcpSocket);
+        sockets[id]=socket_ptr;
+        if(listener.accept(*socket_ptr))
+        {
+            sf::Thread *thread_ptr(new sf::Thread(Server,id));
+            threads[id] = thread_ptr;
+            threads[id]->launch();
+            EOT[id]=false;
+        }
+        for(std::map<int,bool>::iterator itr=EOT.begin();itr!=EOT.end();itr++)
+        {
+            if(itr->second)
+            {
+                delete threads[itr->first];
+                delete sockets[itr->first];
+                threads.erase(itr->first);
+                sockets.erase(itr->first);
+                EOT.erase(itr->first);
+            }
+        }
+        
+    }
+    
     return 0;
 }

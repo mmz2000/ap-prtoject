@@ -7,7 +7,10 @@
 const unsigned short PORT = 5000;
 const std::string IPADDRESS("127.0.0.1");
 
+int sessionid;
+
 sf::TcpSocket socket;
+sf::Mutex globalMutex;
 
 bool Client(void)
 {
@@ -35,16 +38,20 @@ void login()
     {
         std::cout<<"enter username\n";
         std::cin>>username;
-        temp->set_username(username);
         
         std::cout<<"enter password\n";
         std::cin>>password;
+        
+        globalMutex.lock();
         temp->set_password(password);
+        temp->set_username(username);
         
         log.set_allocated_login(temp);
         
         log.SerializeToOstream(&stream);
         packetSend << stream.str();
+        globalMutex.unlock();
+        
         socket.send(packetSend);
         socket.receive(packetReceive);
         if (packetReceive >> resStr)
@@ -54,7 +61,10 @@ void login()
             if(rep.has_login())
             {
                 if(rep.login().session_id()!=0)
+                {
+                    sessionid=rep.login().session_id();
                     done=true;
+                }
             }
         }
     }
@@ -79,24 +89,28 @@ void reg()
     {
         std::cout<<"enter name\n"<<std::flush;
         std::cin>>name;
-        temp->set_name(name);
+        
         
         std::cout<<"enter username\n"<<std::flush;
         std::cin>>username;
-        temp->set_username(username);
         
         
         std::cout<<"enter password\n"<<std::flush;
         std::cin>>password;
-        temp->set_password(password);
         
         std::cout<<"re-enter password\n"<<std::flush;
         std::cin>>confirm;
+        globalMutex.lock();
+        temp->set_name(name);
+        temp->set_username(username);
+        temp->set_password(password);
         temp->set_confirm_password(confirm);
         reg.set_allocated_register_(temp);
     
         reg.SerializeToOstream(&stream);
         packetSend << stream.str();
+        globalMutex.unlock();
+
         socket.send(packetSend);
         socket.receive(packetReceive);
         if (packetReceive >> resSrt)
@@ -111,12 +125,13 @@ void reg()
         }
 
     }
-    //std::cout<<"now try loging in";
-   // login();
+    std::cout<<"now try loging in";
+    login();
 }
 
 void login_register()
 {
+    Client();
     std::cout << "(L) for login (R) for register";
     char action;
     std::cin >> action;
@@ -130,7 +145,6 @@ void login_register()
 }
 
 int main(){
-    Client();
     login_register();
     return 0;
 }
