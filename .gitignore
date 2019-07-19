@@ -1,0 +1,15 @@
+.vscode/settings.json
+client/communication.pb.o
+client/main.o
+client/request.pb.o
+client/response.pb.o
+client/run
+client/types.pb.o
+server/communication.pb.o
+server/main.o
+server/request.pb.o
+server/response.pb.o
+server/run
+server/types.pb.o
+server/database.pb.o
+server/database.db
