@@ -8,6 +8,8 @@ const unsigned short PORT = 5000;
 const std::string IPADDRESS("127.0.0.1");
 
 int sessionid;
+std::string name;
+int score;
 
 sf::TcpSocket socket;
 sf::Mutex globalMutex;
@@ -51,7 +53,7 @@ void login()
         log.SerializeToOstream(&stream);
         packetSend << stream.str();
         globalMutex.unlock();
-        
+
         socket.send(packetSend);
         socket.receive(packetReceive);
         if (packetReceive >> resStr)
@@ -139,9 +141,42 @@ void login_register()
         login();
     else if ( action == 'R' )
         reg();
-    else 
+    else
+    {
         std::cout << "wrong input \n goodbye";
-    exit(1);    
+        exit(1);
+    }
+    socket.disconnect();    
+}
+
+void user_info()
+{
+    Client();
+    Request info;
+    std::string RecStr;
+    std::stringstream stream;
+    sf::Packet packetSend;
+    sf::Packet packetRecieve;
+    request::UserInfo * uinfo_ptr(new request::UserInfo);
+    uinfo_ptr->set_session_id(sessionid);
+    info.set_allocated_user_info(uinfo_ptr);
+    info.SerializeToOstream(&stream);
+    globalMutex.lock();
+    packetSend<<stream.str();
+    globalMutex.unlock();
+    socket.send(packetSend);
+    socket.receive(packetRecieve);
+    if(packetRecieve>>RecStr)
+    {
+        response::UserInfo RUI;
+        RUI.ParseFromString(RecStr);
+        globalMutex.lock();
+        name = RUI.name();
+        score = RUI.score();
+        globalMutex.unlock();
+    }
+    socket.disconnect(); 
+
 }
 
 int main(){

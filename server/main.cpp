@@ -17,6 +17,8 @@
 
 const unsigned short PORT = 5000;
 std::map<std::string,database::User> users;
+std::map<std::string,bool> logged;
+std::map<int,std::string> id2user;
 std::map<int,sf::TcpSocket *> sockets;
 std::map<int,sf::Thread *> threads;
 std::map<int,bool> EOT;
@@ -43,20 +45,39 @@ void openfile ()
         user.ParseFromString(str);
         username=user.username();
         users.insert(std::pair<std::string, database::User>(username,user));
+        logged[username]=false;
     }
     db.close();
+}
+void writefile()
+{
+    std::stringstream stream;
+    globalMutex.lock();
+    std::ofstream db("database.db",std::ios::out);
+    std::map<std::string,database::User>::iterator itr;
+    for(itr=users.begin();itr!=users.end();itr++)
+    {
+        itr->second.SerializeToOstream(&stream);
+        db<<stream.str();
+    }
+    db.close();
+    globalMutex.unlock();
 }
 
 response::Login * log(const request::Login Log)
 {
     response::Login *res(new response::Login);
     
-    if(users.find(Log.username()) != users.end() && Log.password() == users[Log.username()].password())
+    if(users.find(Log.username()) != users.end() && !logged[Log.username()] && Log.password() == users[Log.username()].password())
     {
         globalMutex.lock();
         int a=random_id();
+        while(a==0)
+            a=random_id();
         res->set_session_id(a);
         users[Log.username()].set_session_id(a);
+        id2user[a]=Log.username();
+        logged[Log.username()]=true;
         globalMutex.unlock();
     } else {
         globalMutex.lock();
@@ -68,8 +89,6 @@ response::Login * log(const request::Login Log)
 
 response::Register * reg(const request::Register Reg)
 {
-    std::stringstream stream;
-    std::ofstream db("database.db", std::ios::out | std::ios::app);
     response::Register *res(new response::Register);
     database::User user;
     if(users.find(Reg.username()) == users.end() && Reg.password() == Reg.confirm_password())
@@ -78,17 +97,25 @@ response::Register * reg(const request::Register Reg)
         user.set_name(Reg.name());
         user.set_password(Reg.password());
         user.set_username(Reg.username());
+        user.set_score(0);
         users[user.username()]=user;
 
-        user.SerializeToOstream(&stream);        
-        db<<stream.str()<<std::endl;
-        
+        writefile();
         res->set_success(true);
     } else {
         res->set_success(false);
     }
-    db.close();
-    return res;
+        return res;
+}
+
+response::UserInfo * userI(const request::UserInfo userinfo)
+{
+    int a = userinfo.session_id();
+    std::string b = id2user[a];
+    response::UserInfo * r_value(new response::UserInfo);
+    r_value->set_name(users[b].name());
+    r_value->set_score(users[b].score());
+    return r_value;
 }
 
 void Server(int id)
@@ -111,7 +138,11 @@ void Server(int id)
         } else if(req.has_register_())
         {
             res.set_allocated_register_(reg(req.register_()));
+        } else if(req.has_user_info())
+        {
+            res.set_allocated_user_info(userI(req.user_info()));
         }
+        
     }
     std::stringstream stream;
     res.SerializeToOstream(&stream);
