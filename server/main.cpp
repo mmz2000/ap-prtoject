@@ -78,6 +78,34 @@ int Queue_creat(int size)
     return(a);
 }
 
+response::Scoreboard * SB(const request::Scoreboard sb)
+{
+    response::Scoreboard * r_value (new response::Scoreboard);
+    std::map<int,std::string> score2user;
+    std::map<std::string,database::User>::iterator itr;
+    for(itr=users.begin();itr!=users.end();itr++)
+    {
+        score2user.insert(std::pair<int,std::string>(itr->second.score(),itr->second.name()));
+    }
+    std::string name =users[id2user[sb.session_id()]].name();
+    std::map<int,std::string>::reverse_iterator itr2;
+    int i=0;
+    for(itr2=score2user.rbegin();itr2!=score2user.rend();itr2++)
+    {
+        if(itr2->second==name){
+            r_value->set_user_rate(i);
+            r_value->set_user_score(itr2->first);
+        }
+        if(i<10)
+        {
+            types::UserScore * US = r_value->add_top_10();
+            US->set_name(itr2->second);
+            US->set_score(itr2->first);
+        }
+    }
+    return r_value;
+}
+
 response::Login * log(const request::Login Log)
 {
     response::Login *res(new response::Login);
@@ -201,6 +229,9 @@ void Server(int id)
         } else if(req.has_queue_list())
         {
             res.set_allocated_queue_list(Q_list(req.queue_list()));
+        } else if(req.has_scoreboard())
+        {
+            res.set_allocated_scoreboard(SB(req.scoreboard()));
         }
         
     }

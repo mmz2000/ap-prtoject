@@ -273,7 +273,6 @@ void Q_create(void)
     }
 
 }
-
 void Qmanager()
 {
     
@@ -297,6 +296,38 @@ void Qmanager()
             Q_create();
         }
         
+    }
+}
+
+void SB_display(const response::Scoreboard)
+{
+
+}
+void ScoreBoard()
+{
+    Client();
+    std::stringstream stream;
+    sf::Packet packetSend;
+    sf::Packet packetReceive;
+    std::string resSrt;
+    Request reg;
+    request::Scoreboard *SB(new request::Scoreboard);
+    SB->set_session_id(sessionid);
+    reg.set_allocated_scoreboard(SB);
+    reg.SerializeToOstream(&stream);
+    packetSend << stream.str();
+
+    socket.send(packetSend);
+    socket.send(packetSend);
+    socket.receive(packetReceive);
+    if (packetReceive >> resSrt)
+    {
+        Response rep;
+        rep.ParseFromString(resSrt);
+        if(rep.has_scoreboard())
+        {
+            SB_display(rep.scoreboard());
+        }
     }
 }
 int main(){
