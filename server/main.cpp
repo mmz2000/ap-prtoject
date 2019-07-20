@@ -22,9 +22,11 @@ std::map<int,std::string> id2user;
 std::map<int,sf::TcpSocket *> sockets;
 std::map<int,sf::Thread *> threads;
 std::map<int,bool> EOT;
+std::map<int,database::Queue> Queues;
 
 sf::TcpListener listener;
 sf::Mutex globalMutex;
+
 
 int random_id ()
 {
@@ -62,6 +64,18 @@ void writefile()
     }
     db.close();
     globalMutex.unlock();
+}
+
+int Queue_creat(int size)
+{
+    database::Queue new_queque;
+    int a=random_id();
+    new_queque.set_id(a);
+    new_queque.set_size(size);
+    globalMutex.lock();
+    Queues[a]=new_queque;
+    globalMutex.unlock();
+    return(a);
 }
 
 response::Login * log(const request::Login Log)
@@ -118,9 +132,46 @@ response::UserInfo * userI(const request::UserInfo userinfo)
     return r_value;
 }
 
+response::QueueCreate * Q_creat(const request::QueueCreate QC)
+{
+    response::QueueCreate * r_value (new response::QueueCreate);
+    r_value->set_queue_id(Queue_creat(QC.queue_size()));
+    return r_value;
+}
+
+response::QueueList * Q_list(const request::QueueList QL)
+{
+    response::QueueList * r_value (new response::QueueList);
+    std::map<int,database::Queue>::iterator itr;
+    globalMutex.lock();
+    for(itr=Queues.begin();itr!=Queues.end();itr++)
+    {
+        types::QueueItem * QI = r_value->add_queue_items();
+        QI->set_id(itr->second.id());
+        QI->set_occupied(itr->second.user_ids_size());
+        QI->set_size(itr->second.size());
+    }
+    globalMutex.unlock();
+    return r_value;
+}
+
+response::QueueJoin * Q_join(const request::QueueJoin QJ)
+{
+    globalMutex.lock();
+    response::QueueJoin * r_value(new response::QueueJoin);
+    if(Queues.find(QJ.queue_id())!=Queues.end()&&Queues[QJ.queue_id()].size()>Queues[QJ.queue_id()].user_ids_size())
+    {
+        Queues[QJ.queue_id()].add_user_ids(QJ.session_id());
+        r_value->set_success(true);
+    } else
+    {
+        r_value->set_success(false);
+    }
+    return r_value;
+}
 void Server(int id)
 {
-    std::cout<<"connected\n";
+    std::cout<<"connected"<<std::flush;
     std::string reqStr;
     sf::Packet packetReceive;
     Response res;
@@ -141,6 +192,15 @@ void Server(int id)
         } else if(req.has_user_info())
         {
             res.set_allocated_user_info(userI(req.user_info()));
+        } else if(req.has_queue_create())
+        {
+            res.set_allocated_queue_create(Q_creat(req.queue_create()));
+        } else if(req.has_queue_join())
+        {
+            res.set_allocated_queue_join(Q_join(req.queue_join()));
+        } else if(req.has_queue_list())
+        {
+            res.set_allocated_queue_list(Q_list(req.queue_list()));
         }
         
     }
@@ -153,6 +213,7 @@ void Server(int id)
 
 int main(){
     openfile();
+    Queue_creat(5);
     int id=0;
     listener.listen(PORT);
     bool quit=false;
@@ -161,12 +222,13 @@ int main(){
     {
         sf::TcpSocket *socket_ptr(new sf::TcpSocket);
         sockets[id]=socket_ptr;
-        if(listener.accept(*socket_ptr))
+        if(listener.accept(*socket_ptr)==sf::Socket::Done)
         {
             sf::Thread *thread_ptr(new sf::Thread(Server,id));
             threads[id] = thread_ptr;
             threads[id]->launch();
             EOT[id]=false;
+            id++;
         }
         for(std::map<int,bool>::iterator itr=EOT.begin();itr!=EOT.end();itr++)
         {

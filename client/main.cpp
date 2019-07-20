@@ -7,7 +7,8 @@
 const unsigned short PORT = 5000;
 const std::string IPADDRESS("127.0.0.1");
 
-int sessionid;
+int sessionid=0;
+int Queue_id=-1;
 std::string name;
 int score;
 
@@ -128,7 +129,6 @@ void reg()
 
     }
     std::cout<<"now try loging in";
-    login();
 }
 
 void login_register()
@@ -179,7 +179,129 @@ void user_info()
 
 }
 
+void Q_list()
+{
+    Client();
+    std::stringstream stream;
+    sf::Packet packetSend;
+    sf::Packet packetReceive;
+    std::string resSrt;
+    Request reg;
+    request::QueueList *QL(new request::QueueList);
+    QL->set_session_id(sessionid);
+    reg.set_allocated_queue_list(QL);
+    reg.SerializeToOstream(&stream);
+    packetSend << stream.str();
+
+    socket.send(packetSend);
+    socket.receive(packetReceive);
+    if (packetReceive >> resSrt)
+    {
+        Response rep;
+        rep.ParseFromString(resSrt);
+        if(rep.has_queue_list())
+        {
+            for(types::QueueItem QI:rep.queue_list().queue_items())
+            {
+                std::cout<<"Queue ID: "<<QI.id()<<" Queue occupied/size: "<<QI.occupied()<<"/"<<QI.size()<<std::endl;
+            }
+        }
+    }
+    socket.disconnect();
+}
+bool Q_join(int Q_id)
+{
+    Client();
+    std::stringstream stream;
+    sf::Packet packetSend;
+    sf::Packet packetReceive;
+    std::string resSrt;
+    Request reg;
+    request::QueueJoin *QJ(new request::QueueJoin);
+    QJ->set_session_id(sessionid);
+    QJ->set_queue_id(Q_id);
+    reg.set_allocated_queue_join(QJ);
+    reg.SerializeToOstream(&stream);
+    packetSend << stream.str();
+
+    socket.send(packetSend);
+    socket.receive(packetReceive);
+    if (packetReceive >> resSrt)
+    {
+        Response rep;
+        rep.ParseFromString(resSrt);
+        if(rep.has_queue_join())
+        {
+            if(rep.queue_join().success())
+                Queue_id=Q_id;
+        }
+        socket.disconnect();
+        return rep.queue_join().success();
+    }
+    return false;
+}
+void Q_create(void) 
+{
+
+    Client();
+    std::stringstream stream;
+    sf::Packet packetSend;
+    sf::Packet packetReceive;
+    std::string resSrt;
+    Request reg;
+    request::QueueCreate *QC(new request::QueueCreate);
+    QC->set_session_id(sessionid);
+    int a;
+    std::cout<<"input size of the new queue";
+    std::cin>>a;
+    QC->set_queue_size(a);
+    reg.set_allocated_queue_create(QC);
+    reg.SerializeToOstream(&stream);
+    packetSend << stream.str();
+
+    socket.send(packetSend);
+    socket.receive(packetReceive);
+    if (packetReceive >> resSrt)
+    {
+        Response rep;
+        rep.ParseFromString(resSrt);
+        if(rep.has_queue_create())
+        {
+            socket.disconnect();
+            Q_join(rep.queue_create().queue_id());
+        }
+    }
+
+}
+
+void Qmanager()
+{
+    
+    while(Queue_id==-1)
+    {
+        Q_list();
+        std::cout<<"(J) to join a queue (C) to create\n";
+        char a;
+        std::cin>>a;
+        if(a=='J')
+        {
+            std::cout<<"enter queueid";
+            int b;
+            std::cin>>b;
+            if(!Q_join)
+            {
+                std::cout<<"try again";
+            }
+        } else
+        {
+            Q_create();
+        }
+        
+    }
+}
 int main(){
-    login_register();
+    while(sessionid==0)
+        login_register();
+    Qmanager();
     return 0;
 }
