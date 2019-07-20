@@ -3,6 +3,7 @@
 #include <SFML/Network.hpp>
 #include "request.pb.h"
 #include "communication.pb.h"
+#include <unistd.h>
 
 const unsigned short PORT = 5000;
 const std::string IPADDRESS("127.0.0.1");
@@ -14,7 +15,7 @@ int score;
 
 sf::TcpSocket socket;
 sf::Mutex globalMutex;
-
+bool initialized=false;
 bool Client(void)
 {
     if(socket.connect(IPADDRESS, PORT) == sf::Socket::Done)
@@ -179,6 +180,38 @@ void user_info()
 
 }
 
+void Q_status ()
+{
+    Client();
+    std::stringstream stream;
+    sf::Packet packetSend;
+    sf::Packet packetReceive;
+    std::string resSrt;
+    Request reg;
+    request::QueueStatus *QS(new request::QueueStatus);
+    QS->set_session_id(sessionid);
+    reg.set_allocated_queue_status(QS);
+    reg.SerializeToOstream(&stream);
+    packetSend << stream.str();
+
+    socket.send(packetSend);
+    socket.receive(packetReceive);
+    if (packetReceive >> resSrt)
+    {
+        Response rep;
+        rep.ParseFromString(resSrt);
+        if(rep.has_queue_status())
+        {
+            for(std::string names:rep.queue_status().player_names())
+            {
+                std::cout<<names<<"has joined\n";
+            }
+            std::cout<<"queue size:"<<rep.queue_status().size();
+            initialized=rep.queue_status().initialized();
+        }
+    }
+    socket.disconnect();
+}
 void Q_list()
 {
     Client();
@@ -295,7 +328,10 @@ void Qmanager()
         {
             Q_create();
         }
-        
+    }
+    while(!initialized){
+        Q_status();
+        usleep(5000);
     }
 }
 

@@ -23,6 +23,7 @@ std::map<int,sf::TcpSocket *> sockets;
 std::map<int,sf::Thread *> threads;
 std::map<int,bool> EOT;
 std::map<int,database::Queue> Queues;
+std::map<int,int> id2qid;
 
 sf::TcpListener listener;
 sf::Mutex globalMutex;
@@ -191,11 +192,30 @@ response::QueueJoin * Q_join(const request::QueueJoin QJ)
     {
         Queues[QJ.queue_id()].add_user_ids(QJ.session_id());
         r_value->set_success(true);
+        id2qid[QJ.session_id()]=QJ.queue_id();
     } else
     {
         r_value->set_success(false);
     }
+    globalMutex.unlock();
     return r_value;
+}
+
+response::QueueStatus * Q_status(const request::QueueStatus QS)
+{
+    response::QueueStatus * r_value(new response::QueueStatus);
+    int Q_id=id2qid[QS.session_id()];
+    for(int a : Queues[Q_id].user_ids())
+    {
+        r_value->add_player_names(users[id2user[a]].name());
+    }
+    r_value->set_size(Queues[Q_id].size());
+    if(Queues[Q_id].user_ids_size()==Queues[Q_id].size())
+        r_value->set_initialized(true);
+    else
+        r_value->set_initialized(false);
+    return r_value;
+    
 }
 void Server(int id)
 {
@@ -232,8 +252,11 @@ void Server(int id)
         } else if(req.has_scoreboard())
         {
             res.set_allocated_scoreboard(SB(req.scoreboard()));
+        } else if(req.has_queue_status())
+        {
+            res.set_allocated_queue_status(Q_status(req.queue_status()));
         }
-        
+
     }
     std::stringstream stream;
     res.SerializeToOstream(&stream);
