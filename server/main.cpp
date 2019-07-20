@@ -61,7 +61,7 @@ void writefile()
     for(itr=users.begin();itr!=users.end();itr++)
     {
         itr->second.SerializeToOstream(&stream);
-        db<<stream.str();
+        db<<stream.str()<<std::endl;
     }
     db.close();
     globalMutex.unlock();

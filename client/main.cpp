@@ -20,7 +20,7 @@ bool Client(void)
 {
     if(socket.connect(IPADDRESS, PORT) == sf::Socket::Done)
     {
-        std::cout << "connected\n";
+        //std::cout << "connected\n";
         return true;
     }
     return false;
@@ -40,10 +40,10 @@ void login()
     std::string resStr;
     while(!done)
     {
-        std::cout<<"enter username\n";
+        std::cout<<"enter username\n"<<std::flush;
         std::cin>>username;
         
-        std::cout<<"enter password\n";
+        std::cout<<"enter password\n"<<std::flush;
         std::cin>>password;
         
         globalMutex.lock();
@@ -129,13 +129,13 @@ void reg()
         }
 
     }
-    std::cout<<"now try loging in";
+    std::cout<<"now try loging in"<<std::flush;
 }
 
 void login_register()
 {
     Client();
-    std::cout << "(L) for login (R) for register";
+    std::cout << "(L) for login (R) for register"<<std::flush;
     char action;
     std::cin >> action;
     if( action == 'L' )
@@ -144,7 +144,7 @@ void login_register()
         reg();
     else
     {
-        std::cout << "wrong input \n goodbye";
+        std::cout << "wrong input \n goodbye"<<std::flush;
         exit(1);
     }
     socket.disconnect();    
@@ -204,9 +204,9 @@ void Q_status ()
         {
             for(std::string names:rep.queue_status().player_names())
             {
-                std::cout<<names<<"has joined\n";
+                std::cout<<names<<" has joined\n"<<std::flush;
             }
-            std::cout<<"queue size:"<<rep.queue_status().size();
+            std::cout<<"queue size:"<<rep.queue_status().size()<<std::endl<<std::flush;
             initialized=rep.queue_status().initialized();
         }
     }
@@ -236,7 +236,7 @@ void Q_list()
         {
             for(types::QueueItem QI:rep.queue_list().queue_items())
             {
-                std::cout<<"Queue ID: "<<QI.id()<<" Queue occupied/size: "<<QI.occupied()<<"/"<<QI.size()<<std::endl;
+                std::cout<<"Queue ID: "<<QI.id()<<" Queue occupied/size: "<<QI.occupied()<<"/"<<QI.size()<<std::endl<<std::flush;
             }
         }
     }
@@ -245,6 +245,7 @@ void Q_list()
 bool Q_join(int Q_id)
 {
     Client();
+    std::cout<<Q_id<<"  "<<Queue_id<<std::flush;
     std::stringstream stream;
     sf::Packet packetSend;
     sf::Packet packetReceive;
@@ -266,7 +267,9 @@ bool Q_join(int Q_id)
         if(rep.has_queue_join())
         {
             if(rep.queue_join().success())
+            {
                 Queue_id=Q_id;
+            }
         }
         socket.disconnect();
         return rep.queue_join().success();
@@ -285,7 +288,7 @@ void Q_create(void)
     request::QueueCreate *QC(new request::QueueCreate);
     QC->set_session_id(sessionid);
     int a;
-    std::cout<<"input size of the new queue";
+    std::cout<<"input size of the new queue"<<std::flush;
     std::cin>>a;
     QC->set_queue_size(a);
     reg.set_allocated_queue_create(QC);
@@ -312,17 +315,17 @@ void Qmanager()
     while(Queue_id==-1)
     {
         Q_list();
-        std::cout<<"(J) to join a queue (C) to create\n";
+        std::cout<<"(J) to join a queue (C) to create\n"<<Queue_id<<std::flush;
         char a;
         std::cin>>a;
         if(a=='J')
         {
-            std::cout<<"enter queueid";
+            std::cout<<"enter queueid"<<std::flush;
             int b;
             std::cin>>b;
-            if(!Q_join)
+            if(!Q_join(b))
             {
-                std::cout<<"try again";
+                std::cout<<"try again"<<std::flush;
             }
         } else
         {
@@ -331,7 +334,7 @@ void Qmanager()
     }
     while(!initialized){
         Q_status();
-        usleep(5000);
+        sleep(5);
     }
 }
 
